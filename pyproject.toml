@@ -1,0 +1,14 @@
+[project]
+name = "python-unstructured"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "huggingface-hub[hf-xet]>=0.30.2",
+    "marimo>=0.12.10",
+    "mypy>=1.15.0",
+    "sacremoses>=0.1.1",
+    "sentencepiece>=0.2.0",
+    "unstructured[all,all-docs]>=0.17.2",
+]
