@@ -23,12 +23,15 @@ def _():
     import hashlib
     import chromadb
     from unstructured.partition.auto import partition
-    return Path, chromadb, hashlib, mo, partition
+    import bm25s
+    from unstructured.chunking.basic import chunk_elements
+    return Path, bm25s, chromadb, chunk_elements, hashlib, mo, partition
 
 
 @app.cell
 def _(chromadb):
-    chroma_client = chromadb.PersistentClient(path="./chroma_db")
+    # chroma_client = chromadb.PersistentClient(path="./chroma_db")
+    chroma_client = chromadb.Client()
     collection = chroma_client.get_or_create_collection(name="my_collection")
     return chroma_client, collection
 
@@ -41,7 +44,7 @@ def _(mo):
 
 
 @app.cell
-def _(Path, collection, filetypes, hashlib, partition):
+def _(Path, bm25s, chunk_elements, collection, filetypes, hashlib, partition):
     files = Path("data").glob("**/*")
     for file in files:
         if not file.suffix in filetypes.value:
@@ -52,7 +55,7 @@ def _(Path, collection, filetypes, hashlib, partition):
             print(md5)
 
         elements = partition(file)
-        metadatas = [el.to_dict() for el in elements]
+        metadatas = [el.to_dict() for el in chunk_elements(elements)]
         metadatas = [
             dict(
                 element_id=md.get("element_id", ""),
@@ -68,7 +71,25 @@ def _(Path, collection, filetypes, hashlib, partition):
         documents = [el["text"] for el in metadatas]
 
         collection.add(documents=documents, ids=ids, metadatas=metadatas)
-    return documents, elements, f, file, files, ids, md5, metadatas
+
+        # Index bm25
+        corpus = documents
+        retriever = bm25s.BM25(corpus=corpus)
+        retriever.index(bm25s.tokenize(corpus))
+
+        print('indexed')
+    return (
+        corpus,
+        documents,
+        elements,
+        f,
+        file,
+        files,
+        ids,
+        md5,
+        metadatas,
+        retriever,
+    )
 
 
 @app.cell
@@ -80,11 +101,19 @@ def _(mo):
 
 @app.cell
 def _(collection, mo, text):
-    mo.stop(not text.value)
+    query = text.value
+    mo.stop(not query)
 
-    results = collection.query(query_texts=[text.value], n_results=10)
-    results
-    return (results,)
+    embedding_results = collection.query(query_texts=[query], n_results=5)
+    embedding_results
+    return embedding_results, query
+
+
+@app.cell
+def _(bm25s, query, retriever):
+    results, scores = retriever.retrieve(bm25s.tokenize(query), k=5)
+    results, scores
+    return results, scores
 
 
 @app.cell

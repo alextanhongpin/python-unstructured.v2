@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "bm25s>=0.2.12",
     "chromadb>=1.0.5",
     "huggingface-hub[hf-xet]>=0.30.2",
     "marimo>=0.12.10",
